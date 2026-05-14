@@ -1,0 +1,12 @@
+{
+  "name": "Figma Read/Write MCP Bridge",
+  "id": "figma-readwrite-mcp-bridge",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma", "dev"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "devAllowedDomains": ["http://localhost:8787", "ws://localhost:8787"]
+  }
+}

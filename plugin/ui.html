@@ -1,0 +1,50 @@
+<html>
+  <body>
+    <main>
+      <h3>Figma MCP Bridge</h3>
+      <p id="status">Disconnected</p>
+      <label>
+        WebSocket URL
+        <input id="url" value="ws://localhost:8787/plugin" />
+      </label>
+      <button id="connect">Connect</button>
+    </main>
+    <script>
+      const statusEl = document.getElementById("status");
+      const urlEl = document.getElementById("url");
+      let socket = null;
+
+      function setStatus(value) {
+        statusEl.textContent = value;
+      }
+
+      function connect() {
+        if (socket) socket.close();
+        socket = new WebSocket(urlEl.value);
+        setStatus("Connecting...");
+
+        socket.addEventListener("open", () => {
+          setStatus("Connected");
+          parent.postMessage({ pluginMessage: { type: "connected" } }, "*");
+        });
+
+        socket.addEventListener("close", () => setStatus("Disconnected"));
+        socket.addEventListener("error", () => setStatus("Connection error"));
+
+        socket.addEventListener("message", (event) => {
+          parent.postMessage({ pluginMessage: { type: "command", raw: event.data } }, "*");
+        });
+      }
+
+      document.getElementById("connect").addEventListener("click", connect);
+
+      window.onmessage = (event) => {
+        const message = event.data.pluginMessage;
+        if (!message || !socket || socket.readyState !== WebSocket.OPEN) return;
+        socket.send(JSON.stringify(message));
+      };
+
+      connect();
+    </script>
+  </body>
+</html>

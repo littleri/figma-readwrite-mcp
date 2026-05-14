@@ -1,0 +1,28 @@
+{
+  "name": "figma-readwrite-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "npm run build:server && npm run build:plugin",
+    "build:server": "tsc -p tsconfig.json",
+    "build:plugin": "tsc -p tsconfig.plugin.json && node -e \"require('fs').cpSync('dist/plugin/plugin/code.js','plugin/code.js')\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.plugin.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "ws": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "latest",
+    "@types/express": "latest",
+    "@types/node": "latest",
+    "@types/ws": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}

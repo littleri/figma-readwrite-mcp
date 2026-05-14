@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "ES2020",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["@figma/plugin-typings"],
+    "outDir": "dist/plugin",
+    "rootDir": "."
+  },
+  "files": ["plugin/code.ts", "plugin/globals.d.ts"]
+}
