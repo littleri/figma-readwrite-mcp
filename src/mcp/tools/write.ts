@@ -5,6 +5,8 @@ import {
   autoLayoutSchema,
   baseCreateSchema,
   nodePatchSchema,
+  pageFrameSchema,
+  pageTemplateSchema,
   paintSchema,
   parentIdSchema,
   textStyleSchema,
@@ -255,6 +257,40 @@ export function registerWriteTools(server: { registerTool: Function }, bridge: P
       asJsonText(await bridge.send({ type: "updateImageFill", payload }, 30_000)),
   );
 
+  const createPageFramesSchema = z.object({
+    parentId: z.string().min(1),
+    frames: z.array(pageFrameSchema).min(1).max(50),
+  });
+  server.registerTool(
+    "figma_create_page_frames",
+    {
+      title: "Create multiple page frames",
+      description: "Create multiple top-level or nested frames under a Figma Page or Frame parent.",
+      inputSchema: createPageFramesSchema.shape,
+    },
+    async (payload: z.infer<typeof createPageFramesSchema>) => asJsonText(await bridge.send({ type: "createPageFrames", payload }, 30_000)),
+  );
+
+  const createPageFromTemplateSchema = z.object({
+    parentId: z.string().min(1),
+    template: pageTemplateSchema,
+    pages: z.array(z.string().min(1)).min(1).max(30),
+    startX: z.number().optional(),
+    startY: z.number().optional(),
+    gap: z.number().min(0).optional(),
+    width: z.number().positive().optional(),
+    height: z.number().positive().optional(),
+    fills: z.array(paintSchema).optional(),
+  });
+  server.registerTool(
+    "figma_create_page_from_template",
+    {
+      title: "Create page frames from template",
+      description: "Create a batch of website page frames from a named layout template.",
+      inputSchema: createPageFromTemplateSchema.shape,
+    },
+    async (payload: z.infer<typeof createPageFromTemplateSchema>) => asJsonText(await bridge.send({ type: "createPageFromTemplate", payload }, 30_000)),
+  );
   server.registerTool(
     "figma_update_node",
     {

@@ -125,6 +125,17 @@ export const vectorPathSchema = z.object({
   data: z.string().min(1).max(10_000),
 });
 
+export const pageFrameSchema = z.object({
+  name: z.string().min(1),
+  x: z.number(),
+  y: z.number(),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  fills: z.array(paintSchema).optional(),
+});
+
+export const pageTemplateSchema = z.enum(["portfolio-site", "blank-pages"]);
+
 export type PluginCommand =
   | { type: "status" }
   | { type: "getSelection" }
@@ -144,6 +155,8 @@ export type PluginCommand =
   | { type: "detachInstance"; payload: { nodeId: string } }
   | { type: "createImageRectangle"; payload: { name?: string; parentId?: string; x: number; y: number; width: number; height: number; imageUrl: string; scaleMode?: "FILL" | "FIT" | "CROP" | "TILE"; cornerRadius?: number } }
   | { type: "updateImageFill"; payload: { nodeId: string; imageUrl: string; scaleMode?: "FILL" | "FIT" | "CROP" | "TILE" } }
+  | { type: "createPageFrames"; payload: { parentId: string; frames: z.infer<typeof pageFrameSchema>[] } }
+  | { type: "createPageFromTemplate"; payload: { parentId: string; template: z.infer<typeof pageTemplateSchema>; pages: string[]; startX?: number; startY?: number; gap?: number; width?: number; height?: number; fills?: z.infer<typeof paintSchema>[] } }
   | { type: "updateNode"; payload: { nodeId: string; patch: z.infer<typeof nodePatchSchema> } }
   | { type: "deleteNode"; payload: { nodeId: string } }
   | { type: "selectNode"; payload: { nodeId: string } };

@@ -59,6 +59,28 @@ Existing create/update tools now accept richer style fields:
 
 Image fill tools fetch an explicit URL and create an image paint inside Figma.
 
+## Batch page creation
+
+- `figma_create_page_frames`
+- `figma_create_page_from_template`
+
+These tools can create multiple page-level frames under a Figma Page or nested frames under an existing Frame. Use a Page node id such as `0:1` as `parentId` to generate multiple website pages on the same Figma page.
+
+Example page-frame layout:
+
+```json
+{
+  "parentId": "0:1",
+  "template": "portfolio-site",
+  "pages": ["Home", "Work", "Project Detail", "About", "Contact"],
+  "startX": 0,
+  "startY": 0,
+  "gap": 160,
+  "width": 1440,
+  "height": 1024
+}
+```
+
 ## Still not supported
 
 Prototype interactions are still not supported because Figma Plugin API does not expose prototype editing APIs. Click navigation, hover states, and prototype transitions must still be configured manually in Figma Prototype mode.

@@ -164,6 +164,28 @@ async function bytesFromImageUrl(imageUrl: string) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
+async function createPageFrame(parent: BaseNode & ChildrenMixin, framePayload: Record<string, unknown>) {
+  const node = figma.createFrame();
+  node.name = typeof framePayload.name === "string" ? framePayload.name : "Page Frame";
+  applyVisualStyle(node, framePayload);
+  parent.appendChild(node);
+  setGeometry(node, framePayload);
+  return node;
+}
+
+async function getFrameParent(parentId: unknown) {
+  if (typeof parentId !== "string") throw new Error("parentId is required");
+  const parent = await figma.getNodeByIdAsync(parentId);
+  if (!parent || !("appendChild" in parent)) throw new Error("Parent node not found or cannot contain children");
+  return parent as BaseNode & ChildrenMixin;
+}
+
+function templatePageNames(payload: Record<string, unknown>) {
+  if (Array.isArray(payload.pages) && payload.pages.every((page) => typeof page === "string")) return payload.pages as string[];
+  if (payload.template === "portfolio-site") return ["Home", "Work", "Project Detail", "About", "Contact"];
+  return ["Page 1", "Page 2", "Page 3"];
+}
+
 async function imagePaintFromUrl(imageUrl: unknown, scaleMode: unknown): Promise<ImagePaint> {
   if (typeof imageUrl !== "string") throw new Error("imageUrl is required");
   const image = figma.createImage(await bytesFromImageUrl(imageUrl));
@@ -339,6 +361,46 @@ async function handleCommand(command: BridgeCommand) {
     figma.currentPage.selection = [node];
     figma.viewport.scrollAndZoomIntoView([node]);
     return serializeNode(node);
+  }
+
+  if (command.type === "createPageFrames") {
+    const parent = await getFrameParent(payload.parentId);
+    if (!Array.isArray(payload.frames)) throw new Error("frames is required");
+    const nodes: SceneNode[] = [];
+    for (const framePayload of payload.frames) {
+      if (!framePayload || typeof framePayload !== "object") continue;
+      nodes.push(await createPageFrame(parent, framePayload as Record<string, unknown>));
+    }
+    figma.currentPage.selection = nodes;
+    if (nodes.length > 0) figma.viewport.scrollAndZoomIntoView(nodes);
+    return nodes.map(serializeNode);
+  }
+
+  if (command.type === "createPageFromTemplate") {
+    const parent = await getFrameParent(payload.parentId);
+    const pages = templatePageNames(payload);
+    const startX = typeof payload.startX === "number" ? payload.startX : 0;
+    const startY = typeof payload.startY === "number" ? payload.startY : 0;
+    const gap = typeof payload.gap === "number" ? payload.gap : 160;
+    const width = typeof payload.width === "number" ? payload.width : 1440;
+    const height = typeof payload.height === "number" ? payload.height : 1024;
+    const nodes: SceneNode[] = [];
+
+    for (let index = 0; index < pages.length; index += 1) {
+      const framePayload = {
+        name: pages[index],
+        x: startX + index * (width + gap),
+        y: startY,
+        width,
+        height,
+        fills: payload.fills,
+      };
+      nodes.push(await createPageFrame(parent, framePayload));
+    }
+
+    figma.currentPage.selection = nodes;
+    if (nodes.length > 0) figma.viewport.scrollAndZoomIntoView(nodes);
+    return nodes.map(serializeNode);
   }
 
   if (command.type === "updateImageFill") {
