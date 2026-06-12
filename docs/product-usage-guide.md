@@ -197,22 +197,47 @@ curl http://localhost:8787/health
 
 ## 8. 当前支持的 MCP 工具
 
-### 8.1 读取工具
+### 8.1 REST 读取工具（需要 FIGMA_TOKEN）
 
 | 工具 | 用途 |
 |---|---|
-| `figma_get_file` | 读取整个 Figma 文件 |
-| `figma_get_node` | 读取指定节点 |
-| `figma_get_images` | 导出节点图片 |
-| `figma_get_comments` | 读取评论 |
-| `figma_get_versions` | 读取版本历史 |
+| `figma_rest_get_file` / `figma_get_file` | 读取整个 Figma 文件 |
+| `figma_rest_get_node` / `figma_get_node` | 读取指定节点 |
+| `figma_rest_get_images` / `figma_get_images` | 导出节点图片 |
+| `figma_rest_get_comments` / `figma_get_comments` | 读取评论 |
+| `figma_rest_get_versions` / `figma_get_versions` | 读取版本历史 |
 
-### 8.2 基础写入工具
+### 8.2 插件读取工具（需要 Figma 插件连接）
+
+| 工具 | 用途 |
+|---|---|
+| `figma_plugin_get_current_file_summary` | 获取当前打开文件摘要 |
+| `figma_plugin_get_current_page` | 获取当前页面节点列表 |
+| `figma_plugin_get_page_tree` | 获取当前页面树（深度限制） |
+| `figma_plugin_get_node` | 获取指定节点 |
+| `figma_plugin_get_node_tree` | 获取指定节点及其子节点树 |
+| `figma_plugin_get_selection` / `figma_get_selection` | 获取当前选中节点 |
+
+### 8.3 自动读取工具（自动选择 REST 或插件）
+
+| 工具 | 用途 |
+|---|---|
+| `figma_read_context` | 读取设计上下文，自动选择 REST 或插件 |
+| `figma_read_node` | 读取指定节点，自动选择 REST 或插件 |
+
+自动选择策略：
+- 提供 `fileKey` 或 Figma URL → REST
+- 读取评论、版本、图片导出 → REST
+- 读取当前选中、页面、文件 → 插件
+- 只有 `nodeId` 且插件已连接 → 插件
+- FIGMA_TOKEN 未配置且插件已连接 → 插件
+- 两者都不可用 → 明确错误提示
+
+### 8.4 基础写入工具
 
 | 工具 | 用途 |
 |---|---|
 | `figma_plugin_status` | 查看插件连接状态 |
-| `figma_get_selection` | 获取当前选中节点 |
 | `figma_create_frame` | 创建 frame |
 | `figma_create_rectangle` | 创建矩形 |
 | `figma_create_text` | 创建文本 |
@@ -220,7 +245,7 @@ curl http://localhost:8787/health
 | `figma_delete_node` | 删除节点 |
 | `figma_select_node` | 选中节点 |
 
-### 8.3 扩展写入工具
+### 8.5 扩展写入工具
 
 | 工具 | 用途 |
 |---|---|
@@ -235,12 +260,113 @@ curl http://localhost:8787/health
 | `figma_create_component_from_node` | 从节点创建组件 |
 | `figma_create_instance` | 创建组件实例 |
 | `figma_detach_instance` | 拆分组件实例 |
+| `figma_combine_as_variants` | 将多个组件合并为 variants |
+| `figma_add_component_property` | 给组件添加文本、布尔、实例替换属性 |
+| `figma_edit_component_property` | 编辑组件属性名称或默认值 |
+| `figma_set_component_property_reference` | 将组件属性绑定到内部图层字段 |
+| `figma_get_component_properties` | 读取组件属性 key 与定义 |
+| `figma_create_instance_with_overrides` | 创建实例并设置 variant/property overrides |
+| `figma_create_variable_collection` | 创建变量集合 |
+| `figma_add_variable_mode` | 添加变量模式，例如 Dark |
+| `figma_rename_variable_mode` | 重命名变量模式 |
+| `figma_create_variable` | 创建 COLOR/FLOAT/STRING/BOOLEAN 变量 |
+| `figma_set_variable_value_for_mode` | 设置变量在某个模式下的值 |
+| `figma_get_local_variables` | 读取本地变量 |
+| `figma_get_local_variable_collections` | 读取本地变量集合 |
+| `figma_bind_variable` | 将变量绑定到 fill、stroke、effect 或节点字段 |
+| `figma_set_explicit_variable_mode` | 设置 frame 的变量模式以切换 Light/Dark |
+| `figma_create_theme_tokens` | 一次性创建 Light/Dark 主题 token |
 | `figma_create_image_rectangle` | 创建图片填充矩形 |
 | `figma_update_image_fill` | 更新图片填充 |
 | `figma_create_page_frames` | 批量创建页面 frame |
 | `figma_create_page_from_template` | 根据模板批量创建页面 frame |
+| `figma_batch_create_nodes` | 批量事务创建节点树，支持 tempId 和 rollback |
 
 ## 9. 批量创建页面
+
+### 9.0 批量事务创建 App 界面
+
+`figma_batch_create_nodes` 适合一次生成移动端 App screen、卡片列表、导航栏和 tab bar。它支持：
+
+- `tempId`：当前批次内的临时 id。
+- `parentTempId`：把子节点挂到同批次内的父节点。
+- `validateOnly`：只校验 payload，不改画布。
+- `rollbackOnError`：默认 true，任一节点失败时移除已经创建的节点。
+
+示例：
+
+```json
+{
+  "nodes": [
+    {
+      "tempId": "screen.home",
+      "type": "AUTO_LAYOUT_FRAME",
+      "props": {
+        "name": "Home",
+        "x": 0,
+        "y": 0,
+        "width": 393,
+        "height": 852,
+        "layoutMode": "VERTICAL",
+        "paddingTop": 24,
+        "paddingRight": 16,
+        "paddingBottom": 24,
+        "paddingLeft": 16,
+        "itemSpacing": 16
+      }
+    },
+    {
+      "tempId": "screen.home.title",
+      "type": "TEXT",
+      "parentTempId": "screen.home",
+      "props": {
+        "text": "TableDoll",
+        "x": 0,
+        "y": 0,
+        "fontSize": 28
+      }
+    }
+  ],
+  "rollbackOnError": true
+}
+```
+
+### 9.0.1 组件 variants 与实例覆盖
+
+推荐工作流：
+
+1. 用 `figma_create_component` 创建多个状态组件，例如 `Button / Primary, State=Default` 和 `Button / Primary, State=Pressed`。
+2. 用 `figma_combine_as_variants` 合并为 component set。
+3. 用 `figma_get_component_properties` 读取真实属性 key。
+4. 用 `figma_create_instance_with_overrides` 创建实例，并传入 `{ "State": "Pressed" }` 或 `Label#...` 这类覆盖值。
+
+### 9.0.2 Light/Dark variables
+
+推荐用 variables 控制颜色主题，而不是复制两套组件：
+
+1. 用 `figma_create_theme_tokens` 创建 `Theme` collection，包含 `Light` 和 `Dark` modes。
+2. 用 `figma_bind_variable` 将 fill、stroke、text fill 或间距字段绑定到变量。
+3. 用 `figma_set_explicit_variable_mode` 在 screen frame 上切换 Light/Dark。
+
+最小 token 示例：
+
+```json
+{
+  "collectionName": "Theme",
+  "modes": ["Light", "Dark"],
+  "tokens": [
+    {
+      "name": "color/bg/canvas",
+      "type": "COLOR",
+      "scopes": ["FRAME_FILL"],
+      "values": {
+        "Light": { "r": 0.98, "g": 0.98, "b": 1, "a": 1 },
+        "Dark": { "r": 0.04, "g": 0.05, "b": 0.07, "a": 1 }
+      }
+    }
+  ]
+}
+```
 
 ### 9.1 根据模板创建作品集网站页面
 

@@ -1,5 +1,5 @@
 {
-  "name": "Figma Read/Write MCP Bridge",
+  "name": "Codex Figma Read/Write MCP Bridge",
   "id": "figma-readwrite-mcp-bridge",
   "api": "1.0.0",
   "main": "code.js",
